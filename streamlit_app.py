@@ -29,18 +29,30 @@ st.set_page_config(page_title="ハングル検定5級 単語クイズ", page_ico
 
 # セッション状態の初期化
 if "history" not in st.session_state:
-    st.session_state.history = []  # 各回答の履歴 [{"word": ..., "user": ..., "correct": ..., "is_ok": bool}]
+    st.session_state.history = []
 if "wrong_words" not in st.session_state:
-    st.session_state.wrong_words = set()  # 間違えた単語の単語名セット
+    st.session_state.wrong_words = set()
 if "current_question" not in st.session_state:
     st.session_state.current_question = None
+if "answered" not in st.session_state:
+    st.session_state.answered = False
+if "last_result" not in st.session_state:
+    st.session_state.last_result = None
 
 st.title("🇰🇷 ハングル検定5級 単語クイズアプリ")
-st.write("韓国語の基礎単語200語の中からランダムに出題！間違えた問題は復習モードで徹底的に覚えよう。")
+st.write("韓国語の基礎単語の中からランダムに出題！間違えた問題は復習モードで徹底的に覚えよう。")
 
 # サイドバー：モード選択と統計
 st.sidebar.header("⚙️ メニュー・設定")
 mode = st.sidebar.radio("モード選択", ["通常モード (全単語)", "復習モード (間違えた単語のみ)"])
+
+# モードが変わったときに現在の問題をリセットする
+if "last_mode" not in st.session_state:
+    st.session_state.last_mode = mode
+elif st.session_state.last_mode != mode:
+    st.session_state.last_mode = mode
+    st.session_state.current_question = None
+    st.session_state.answered = False
 
 st.sidebar.divider()
 st.sidebar.subheader("📊 あなたの学習状況")
@@ -53,12 +65,12 @@ if st.sidebar.button("🗑️ 学習データをリセット"):
     st.session_state.history = []
     st.session_state.wrong_words = set()
     st.session_state.current_question = None
+    st.session_state.answered = False
     st.rerun()
 
-# 問題を新しく取得する関数
-def get_new_question(mode_type):
+# 問題を新しく取得・作成する関数
+def generate_new_question(mode_type):
     if mode_type == "復習モード (間違えた単語のみ)":
-        # 間違えた単語リストに合致するDBの項目を抽出
         available_pool = [w for w in WORDS_DB if w["word"] in st.session_state.wrong_words]
         if not available_pool:
             return None
@@ -66,14 +78,13 @@ def get_new_question(mode_type):
         available_pool = WORDS_DB
 
     q = random.choice(available_pool)
-    # 選択肢をランダムにシャッフル
     options = q["options"].copy()
     random.shuffle(options)
     return {"word": q["word"], "meaning": q["meaning"], "options": options}
 
-# モード切替時や初回に問題が未設定の場合の初期化
+# 初回、または問題がない場合に問題を設定
 if st.session_state.current_question is None:
-    st.session_state.current_question = get_new_question(mode)
+    st.session_state.current_question = generate_new_question(mode)
 
 # 復習モードで単語がない場合のハンドリング
 if mode == "復習モード (間違えた単語のみ)" and len(st.session_state.wrong_words) == 0:
@@ -81,7 +92,7 @@ if mode == "復習モード (間違えた単語のみ)" and len(st.session_state
 else:
     q = st.session_state.current_question
 
-    st.subheader(f"Q. 次の韓国語の意味として正しいものは？")
+    st.subheader("Q. 次の韓国語の意味として正しいものは？")
     
     # 単語を大きく表示
     st.markdown(
@@ -89,35 +100,49 @@ else:
         unsafe_allow_html=True
     )
 
-    # 解答フォーム
-    with st.form(key="quiz_form"):
-        selected_answer = st.radio("選択肢を選んでください：", q["options"])
-        submit_button = st.form_submit_button(label="回答する")
+    # まだ回答していない場合
+    if not st.session_state.answered:
+        with st.form(key="quiz_form"):
+            selected_answer = st.radio("選択肢を選んでください：", q["options"])
+            submit_button = st.form_submit_button(label="回答する")
 
-    if submit_button:
-        is_correct = (selected_answer == q["meaning"])
-        
-        # 履歴に追加
-        st.session_state.history.append({
-            "word": q["word"],
-            "correct_meaning": q["meaning"],
-            "user_answer": selected_answer,
-            "is_correct": is_correct
-        })
+        if submit_button:
+            is_correct = (selected_answer == q["meaning"])
+            
+            # 履歴に追加
+            st.session_state.history.append({
+                "word": q["word"],
+                "correct_meaning": q["meaning"],
+                "user_answer": selected_answer,
+                "is_correct": is_correct
+            })
 
-        if is_correct:
+            if is_correct:
+                if q["word"] in st.session_state.wrong_words:
+                    st.session_state.wrong_words.remove(q["word"])
+            else:
+                st.session_state.wrong_words.add(q["word"])
+
+            st.session_state.answered = True
+            st.session_state.last_result = {
+                "is_correct": is_correct,
+                "correct_meaning": q["meaning"],
+                "user_answer": selected_answer
+            }
+            st.rerun()
+
+    # 回答済みの場合は結果表示と「次の問題へ」ボタンを表示
+    else:
+        res = st.session_state.last_result
+        if res["is_correct"]:
             st.success("✨ 正解です！素晴らしい！")
-            # 正解したら復習リストから削除
-            if q["word"] in st.session_state.wrong_words:
-                st.session_state.wrong_words.remove(q["word"])
         else:
-            st.error(f"❌ 残念... 正解は「{q['meaning']}」です。")
-            # 間違えたら復習リストに追加
-            st.session_state.wrong_words.add(q["word"])
+            st.error(f"❌ 残念... 正解は「{res['correct_meaning']}」です。（あなたの回答: {res['user_answer']}）")
 
-        # 次の問題ボタン
         if st.button("▶️ 次の問題へ進む"):
-            st.session_state.current_question = get_new_question(mode)
+            st.session_state.current_question = generate_new_question(mode)
+            st.session_state.answered = False
+            st.session_state.last_result = None
             st.rerun()
 
 st.divider()
@@ -140,6 +165,5 @@ with tab2:
         st.success("現在、間違えた単語はありません！")
     else:
         for w in st.session_state.wrong_words:
-            # 意味を引く
             meaning = next((item["meaning"] for item in WORDS_DB if item["word"] == w), "")
             st.write(f"- **{w}** (意味: {meaning})")
