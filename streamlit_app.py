@@ -1,7 +1,7 @@
 import random
 import streamlit as st
 
-# ハングル検定5級の必須単語・活用例文データ (すべて韓国語の正しい自然な例文)
+# ハングル検定5級の必須単語・活用例文データ (正しいハングルのみで構成)
 WORDS_DB = [
     {"word": "가다", "meaning": "行く", "sentence": "내일 학교에 **가요**."},
     {"word": "오다", "meaning": "来る", "sentence": "친구가 집에 **왔어요**."},
