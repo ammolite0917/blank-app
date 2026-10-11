@@ -1,33 +1,113 @@
 import random
 import streamlit as st
 
-# ハングル検定5級の必須単語・例文データ
+# ハングル検定5級の必須単語・活用例文データ (ヘヨ体 / ハムニダ体 / 否定形など)
 WORDS_DB = [
-    {"word": "가다", "meaning": "行く", "sentence": "학교에 **가다**."},
-    {"word": "오다", "meaning": "来る", "sentence": "친구가 **오다**."},
-    {"word": "먹다", "meaning": "食べる", "sentence": "밥을 **먹다**."},
-    {"word": "마시다", "meaning": "飲む", "sentence": "물을 **마시다**."},
-    {"word": "보다", "meaning": "見る", "sentence": "책을 **보다**."},
-    {"word": "사다", "meaning": "買う", "sentence": "옷을 **사다**."},
-    {"word": "자다", "meaning": "寝る", "sentence": "집에서 **자다**."},
-    {"word": "읽다", "meaning": "読む", "sentence": "신문을 **읽다**."},
-    {"word": "쓰다", "meaning": "書く / 使う", "sentence": "편지를 **쓰다**."},
-    {"word": "말하다", "meaning": "話す", "sentence": "한국어로 **말하다**."},
-    {"word": "사람", "meaning": "人", "sentence": "좋은 **사람**."},
-    {"word": "친구", "meaning": "友達", "sentence": "친한 **친구**."},
-    {"word": "선생님", "meaning": "先生", "sentence": "한국어 **선생님**."},
-    {"word": "학교", "meaning": "学校", "sentence": "즐거운 **학교**."},
-    {"word": "집", "meaning": "家", "sentence": "나의 **집**."},
-    {"word": "물", "meaning": "水", "sentence": "차가운 **물**."},
-    {"word": "밥", "meaning": "ご飯", "sentence": "따뜻한 **밥**."},
-    {"word": "책", "meaning": "本", "sentence": "재미있는 **책**."},
-    {"word": "돈", "meaning": "お金", "sentence": "많은 **돈**."},
-    {"word": "시간", "meaning": "時間", "sentence": "남은 **시간**."},
+    {
+        "word": "가다",
+        "meaning": "行く",
+        "sentence": "내일 학교에 **가요**.",
+    },
+    {
+        "word": "오다",
+        "meaning": "来る",
+        "sentence": "친구가 집에 **왔어요**.",
+    },
+    {
+        "word": "먹다",
+        "meaning": "食べる",
+        "sentence": "아침 밥을 **먹습니다**.",
+    },
+    {
+        "word": "마시다",
+        "meaning": "飲む",
+        "sentence": "커피를 **안 마셔요**.",
+    },
+    {
+        "word": "보다",
+        "meaning": "見る",
+        "sentence": "영화(映画)를 **봐요**.",
+    },
+    {
+        "word": "사다",
+        "meaning": "買う",
+        "sentence": "새 옷を **샀어요**.",
+    },
+    {
+        "word": "자다",
+        "meaning": "寝る",
+        "sentence": "지금 **안 자요**.",
+    },
+    {
+        "word": "읽다",
+        "meaning": "読む",
+        "sentence": "한국어 책을 **읽습니다**.",
+    },
+    {
+        "word": "쓰다",
+        "meaning": "書く / 使う",
+        "sentence": "편지(手紙)를 **써요**.",
+    },
+    {
+        "word": "말하다",
+        "meaning": "話す",
+        "sentence": "천천히 **말해 주세요**.",
+    },
+    {
+        "word": "사람",
+        "meaning": "人",
+        "sentence": "저 **사람**은 누구예요?",
+    },
+    {
+        "word": "친구",
+        "meaning": "友達",
+        "sentence": "한국 **친구**が 있어요.",
+    },
+    {
+        "word": "선생님",
+        "meaning": "先生",
+        "sentence": "우리 **선생님**은 친절해요.",
+    },
+    {
+        "word": "학교",
+        "meaning": "学校",
+        "sentence": "오늘 **학교**に 갑니다.",
+    },
+    {
+        "word": "집",
+        "meaning": "家",
+        "sentence": "지금 **집**に 가요.",
+    },
+    {
+        "word": "물",
+        "meaning": "水",
+        "sentence": "시원한 **물**を 주세요.",
+    },
+    {
+        "word": "밥",
+        "meaning": "ご飯",
+        "sentence": "맛있는 **밥**을 먹어요.",
+    },
+    {
+        "word": "책",
+        "meaning": "本",
+        "sentence": "이 **책**은 재미있어요.",
+    },
+    {
+        "word": "돈",
+        "meaning": "お金",
+        "sentence": "지금 **돈**이 없어요.",
+    },
+    {
+        "word": "시간",
+        "meaning": "時間",
+        "sentence": "지금 **시간**이 있어요?",
+    },
 ]
 
 ALL_MEANINGS = [item["meaning"] for item in WORDS_DB]
 
-st.set_page_config(page_title="ハングル検定5級 例文付き単語クイズ", page_icon="🇰🇷", layout="centered")
+st.set_page_config(page_title="ハングル検定5級 活用例文クイズ", page_icon="🇰🇷", layout="centered")
 
 # セッション状態の初期化
 if "history" not in st.session_state:
@@ -41,8 +121,8 @@ if "answered" not in st.session_state:
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
 
-st.title("🇰🇷 ハングル検定5級 例文クイズアプリ")
-st.write("簡単な例文の中で使われている韓国語（**太字**）の意味を当てよう！間違えた問題は復習モードで再挑戦できます。")
+st.title("🇰🇷 ハングル検定5級 活用例文クイズ")
+st.write("活用された例文（**가요, 갑니다, 안 가요** など）の中から、元の単語の意味を当てよう！")
 
 # サイドバー：モード選択と統計
 st.sidebar.header("⚙️ メニュー・設定")
@@ -103,11 +183,11 @@ if mode == "復習モード (間違えた単語のみ)" and len(st.session_state
 else:
     q = st.session_state.current_question
 
-    st.subheader("Q. 次の例文の太字の部分（単語）の意味として正しいものは？")
+    st.subheader("Q. 例文内の太字の部分（活用形）の元となる単語の意味は？")
     
-    # 例文の表示（HTMLの装飾を使わずStreamlit標準機能で安全に表示）
+    # 例文の表示
     st.info(f"### 例文： {q['sentence']}")
-    st.write(f"対象の単語: **{q['word']}**")
+    st.write(f"対象の原形単語: **{q['word']}**")
 
     # まだ回答していない場合
     if not st.session_state.answered:
@@ -167,7 +247,7 @@ with tab1:
     else:
         for h in reversed(st.session_state.history):
             status = "✅ 正解" if h["is_correct"] else "❌ 不正解"
-            st.write(f"- **{h['sentence']}** ({h['word']}) : あなたの回答 = {h['user_answer']} ({status})")
+            st.write(f"- **{h['sentence']}** (原形: {h['word']}) : あなたの回答 = {h['user_answer']} ({status})")
 
 with tab2:
     st.subheader("現在復習が必要な単語")
