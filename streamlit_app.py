@@ -1,188 +1,145 @@
-import streamlit as st
 import random
+import streamlit as st
 
-# ページの設定
-st.set_page_config(page_title="ハングル検定5級 単語クイズ", page_icon="🇰🇷", layout="centered")
-
-# ハングル検定5級の代表的な必須単語データ (韓国語, 読み, 意味)
-VOCAB_LIST = [
-    {"kr": "가다", "read": "カダ", "meaning": "行く"},
-    {"kr": "오다", "read": "オダ", "meaning": "来る"},
-    {"kr": "먹다", "read": "モクタ", "meaning": "食べる"},
-    {"kr": "마시다", "read": "マシダ", "meaning": "飲む"},
-    {"kr": "보다", "read": "ポダ", "meaning": "見る"},
-    {"kr": "사다", "read": "サダ", "meaning": "買う"},
-    {"kr": "자다", "read": "ジャダ", "meaning": "寝る"},
-    {"kr": "일하다", "read": "イラダ", "meaning": "働く"},
-    {"kr": "쉬다", "read": "シュダ", "meaning": "休む"},
-    {"kr": "만나다", "read": "マンナダ", "meaning": "会う"},
-    {"kr": "책", "read": "チェク", "meaning": "本"},
-    {"kr": "가사", "read": "カサ", "meaning": "歌詞"}, # 変更用プレースホルダー等
-    {"kr": "연필", "read": "ヨンプル", "meaning": "鉛筆"},
-    {"kr": "공책", "read": "ゴンチェク", "meaning": "ノート"},
-    {"kr": "의자", "read": "ウィジャ", "meaning": "椅子"},
-    {"kr": "책상", "read": "チェクサン", "meaning": "机"},
-    {"kr": "학교", "read": "ハッキョ", "meaning": "学校"},
-    {"kr": "선생님", "read": "ソンセンニム", "meaning": "先生"},
-    {"kr": "학생", "read": "ハクセン", "meaning": "学生"},
-    {"kr": "친구", "read": "チング", "meaning": "友達"},
-    {"kr": "오늘", "read": "オヌル", "meaning": "今日"},
-    {"kr": "내일", "read": "ネイル", "meaning": "明日"},
-    {"kr": "어제", "read": "オジェ", "meaning": "昨日"},
-    {"kr": "시간", "read": "シガン", "meaning": "時間"},
-    {"kr": "돈", "read": "トン", "meaning": "お金"},
-    {"kr": "물", "read": "ムル", "meaning": "水"},
-    {"kr": "밥", "read": "パプ", "meaning": "ご飯"},
-    {"kr": "김치", "read": "キムチ", "meaning": "キムチ"},
-    {"kr": "고기", "read": "コギ", "meaning": "肉"},
-    {"kr": "야채", "read": "ヤチェ", "meaning": "野菜"},
+# ハングル検定5級の必須単語データ (単語, 意味, 選択肢)
+WORDS_DB = [
+    {"word": "가다", "meaning": "行く", "options": ["行く", "来る", "食べる", "見る"]},
+    {"word": "오다", "meaning": "来る", "options": ["行く", "来る", "寝る", "会う"]},
+    {"word": "먹다", "meaning": "食べる", "options": ["飲む", "食べる", "買う", "作る"]},
+    {"word": "마시다", "meaning": "飲む", "options": ["飲む", "話す", "読む", "書く"]},
+    {"word": "보다", "meaning": "見る", "options": ["聞く", "見る", "会う", "知る"]},
+    {"word": "사다", "meaning": "買う", "options": ["売る", "買う", "借りる", "貸す"]},
+    {"word": "자다", "meaning": "寝る", "options": ["起きる", "寝る", "走る", "座る"]},
+    {"word": "읽다", "meaning": "読む", "options": ["書く", "読む", "聞く", "話す"]},
+    {"word": "쓰다", "meaning": "書く / 使う", "options": ["書く / 使う", "読む", "見る", "聞く"]},
+    {"word": "말하다", "meaning": "話す", "options": ["話す", "聞く", "読む", "考える"]},
+    {"word": "사람", "meaning": "人", "options": ["人", "車", "家", "学校"]},
+    {"word": "친구", "meaning": "友達", "options": ["先生", "友達", "家族", "兄"]},
+    {"word": "선생님", "meaning": "先生", "options": ["生徒", "先生", "医者", "警察官"]},
+    {"word": "학교", "meaning": "学校", "options": ["会社", "病院", "学校", "銀行"]},
+    {"word": "집", "meaning": "家", "options": ["部屋", "家", "店", "道"]},
+    {"word": "물", "meaning": "水", "options": ["お茶", "水", "酒", "牛乳"]},
+    {"word": "밥", "meaning": "ご飯", "options": ["パン", "ご飯", "肉", "魚"]},
+    {"word": "책", "meaning": "本", "options": ["ノート", "本", "ペン", "手紙"]},
+    {"word": "돈", "meaning": "お金", "options": ["時間", "お金", "服", "カバン"]},
+    {"word": "시간", "meaning": "時間", "options": ["時間", "日", "週", "年"]},
 ]
 
-# セッションステートの初期化
-if "quiz_history" not in st.session_state:
-    st.session_state.quiz_history = []  # 履歴: [{"kr":..., "meaning":..., "correct": True/False}]
+st.set_page_config(page_title="ハングル検定5級 単語クイズ", page_icon="🇰🇷", layout="centered")
 
+# セッション状態の初期化
+if "history" not in st.session_state:
+    st.session_state.history = []  # 各回答の履歴 [{"word": ..., "user": ..., "correct": ..., "is_ok": bool}]
 if "wrong_words" not in st.session_state:
-    st.session_state.wrong_words = []   # 間違えた単語のリスト
-
-if "current_mode" not in st.session_state:
-    st.session_state.current_mode = "通常モード"
-
+    st.session_state.wrong_words = set()  # 間違えた単語の単語名セット
 if "current_question" not in st.session_state:
     st.session_state.current_question = None
 
-if "options" not in st.session_state:
-    st.session_state.options = []
-
-if "answered" not in st.session_state:
-    st.session_state.answered = False
-
-# タイトル
 st.title("🇰🇷 ハングル検定5級 単語クイズアプリ")
-st.write("ハン検5級の必須単語をマスターしよう！")
+st.write("韓国語の基礎単語200語の中からランダムに出題！間違えた問題は復習モードで徹底的に覚えよう。")
 
-# サイドバー：モード選択と成績確認
-st.sidebar.header("メニュー")
-mode = st.sidebar.radio("学習モードを選んでね", ["通常モード (全単語)", "復習モード (間違えた単語のみ)"])
+# サイドバー：モード選択と統計
+st.sidebar.header("⚙️ メニュー・設定")
+mode = st.sidebar.radio("モード選択", ["通常モード (全単語)", "復習モード (間違えた単語のみ)"])
 
-if mode != st.session_state.current_mode:
-    st.session_state.current_mode = mode
+st.sidebar.divider()
+st.sidebar.subheader("📊 あなたの学習状況")
+total_answered = len(st.session_state.history)
+total_wrong = len(st.session_state.wrong_words)
+st.sidebar.write(f"回答数: {total_answered} 問")
+st.sidebar.write(f"要復習の単語: {total_wrong} 語")
+
+if st.sidebar.button("🗑️ 学習データをリセット"):
+    st.session_state.history = []
+    st.session_state.wrong_words = set()
     st.session_state.current_question = None
-    st.session_state.answered = False
     st.rerun()
 
-# 成績・統計
-total_answered = len(st.session_state.quiz_history)
-correct_count = sum(1 for h in st.session_state.quiz_history if h["correct"])
-accuracy = (correct_count / total_answered * 100) if total_answered > 0 else 0
-
-st.sidebar.markdown("---")
-st.sidebar.subheader("📊 あなたの学習記録")
-st.sidebar.write(f"回答数: **{total_answered}** 問")
-st.sidebar.write(f"正答率: **{accuracy:.1f}%**")
-st.sidebar.write(f"間違えた単語の数: **{len(st.session_state.wrong_words)}** 個")
-
-if st.sidebar.button("🧹 記録をリセット"):
-    st.session_state.quiz_history = []
-    st.session_state.wrong_words = []
-    st.session_state.current_question = None
-    st.session_state.answered = False
-    st.rerun()
-
-# 問題生成関数
-def generate_question():
-    target_pool = VOCAB_LIST
-    if st.session_state.current_mode == "復習モード (間違えた単語のみ)":
-        if len(st.session_state.wrong_words) > 0:
-            target_pool = st.session_state.wrong_words
-        else:
-            st.warning("復習する単語がありません！通常モードでたくさん問題を解いてみましょう。")
-            return
-
-    # ランダムに問題を選ぶ
-    q = random.choice(target_pool)
-    st.session_state.current_question = q
-
-    # 選択肢を作成 (正解1つ + ダミー3つ)
-    other_pool = [v["meaning"] for v in VOCAB_LIST if v["meaning"] != q["meaning"]]
-    dummies = random.sample(other_pool, min(3, len(other_pool)))
-    options = dummies + [q["meaning"]]
-    random.shuffle(options)
-    st.session_state.options = options
-    st.session_state.answered = False
-
-# 問題がまだない、または次の問題に進む場合
-if st.session_state.current_question is None:
-    if st.session_state.current_mode == "復習モード (間違えた単語のみ)" and len(st.session_state.wrong_words) == 0:
-        st.info("現在、復習すべき間違えた単語はありません。")
+# 問題を新しく取得する関数
+def get_new_question(mode_type):
+    if mode_type == "復習モード (間違えた単語のみ)":
+        # 間違えた単語リストに合致するDBの項目を抽出
+        available_pool = [w for w in WORDS_DB if w["word"] in st.session_state.wrong_words]
+        if not available_pool:
+            return None
     else:
-        generate_question()
-        st.rerun()
+        available_pool = WORDS_DB
 
-# クイズ出題画面
-if st.session_state.current_question:
+    q = random.choice(available_pool)
+    # 選択肢をランダムにシャッフル
+    options = q["options"].copy()
+    random.shuffle(options)
+    return {"word": q["word"], "meaning": q["meaning"], "options": options}
+
+# モード切替時や初回に問題が未設定の場合の初期化
+if st.session_state.current_question is None:
+    st.session_state.current_question = get_new_question(mode)
+
+# 復習モードで単語がない場合のハンドリング
+if mode == "復習モード (間違えた単語のみ)" and len(st.session_state.wrong_words) == 0:
+    st.info("🎉 現在、復習が必要な単語はありません！「通常モード」でクイズを進めてみましょう。")
+else:
     q = st.session_state.current_question
-    
-    st.subheader(f"📝 問題 ({st.session_state.current_mode})")
-    st.markdown(f"次の韓国語の意味として正しいものはどれでしょう？")
+
+    st.subheader(f"Q. 次の韓国語の意味として正しいものは？")
     
     # 単語を大きく表示
-    st.markdown(f"<h1 style='text-align: center; color: #4A90E2;'>{q['kr']}</h1>", unsafe_allow_html=True)
-    
+    st.markdown(
+        f"<h1 style='text-align: center; color: #4A90E2; padding: 20px; background-color: #F0F4F8; border-radius: 10px;'>{q['word']}</h1>",
+        unsafe_allow_html=True
+    )
+
     # 解答フォーム
     with st.form(key="quiz_form"):
-        selected_option = st.radio("選択肢:", st.session_state.options, index=None)
+        selected_answer = st.radio("選択肢を選んでください：", q["options"])
         submit_button = st.form_submit_button(label="回答する")
 
     if submit_button:
-        if selected_option is None:
-            st.warning("選択肢を一つ選んでください。")
+        is_correct = (selected_answer == q["meaning"])
+        
+        # 履歴に追加
+        st.session_state.history.append({
+            "word": q["word"],
+            "correct_meaning": q["meaning"],
+            "user_answer": selected_answer,
+            "is_correct": is_correct
+        })
+
+        if is_correct:
+            st.success("✨ 正解です！素晴らしい！")
+            # 正解したら復習リストから削除
+            if q["word"] in st.session_state.wrong_words:
+                st.session_state.wrong_words.remove(q["word"])
         else:
-            st.session_state.answered = True
-            is_correct = (selected_option == q["meaning"])
-            
-            # 履歴に追加
-            st.session_state.quiz_history.append({
-                "kr": q["kr"],
-                "read": q["read"],
-                "meaning": q["meaning"],
-                "correct": is_correct
-            })
+            st.error(f"❌ 残念... 正解は「{q['meaning']}」です。")
+            # 間違えたら復習リストに追加
+            st.session_state.wrong_words.add(q["word"])
 
-            # 間違えた単語リストの管理
-            # 既にリストになければ追加、正解したらリストから削除
-            existing_words = [w["kr"] for w in st.session_state.wrong_words]
-            if not is_correct:
-                if q["kr"] not in existing_words:
-                    st.session_state.wrong_words.append(q)
-            else:
-                # 正解できたら復習リストから外す
-                st.session_state.wrong_words = [w for w in st.session_state.wrong_words if w["kr"] != q["kr"]]
-
-            if is_correct:
-                st.success("🎉 正解です！素晴らしい！")
-            else:
-                st.error(f"❌ 残念！正解は **{q['meaning']}** （読み：{q['read']}）でした。")
-            
+        # 次の問題ボタン
+        if st.button("▶️ 次の問題へ進む"):
+            st.session_state.current_question = get_new_question(mode)
             st.rerun()
 
-    if st.session_state.answered:
-        if st.button("▶️ 次の問題へ"):
-            generate_question()
-            st.rerun()
+st.divider()
 
-# 탭切り替えで「間違えた単語一覧」を表示
-st.markdown("---")
-st.subheader("📚 間違えた単語の一覧・復習用リスト")
-if len(st.session_state.wrong_words) == 0:
-    st.info("現在、覚えるべき間違えた単語はありません。この調子で頑張りましょう！")
-else:
-    st.write(f"現在 **{len(st.session_state.wrong_words)}個** の単語が登録されています。")
-    for idx, w in enumerate(st.session_state.wrong_words, 1):
-        st.write(f"{idx}. **{w['kr']}** （読み: {w['read']}） - 意味: **{w['meaning']}**")
-```
+# 過去の解答履歴および間違えた単語一覧の表示
+tab1, tab2 = st.tabs(["📝 これまでの解答履歴", "⚠️ 間違えた単語一覧"])
 
-### アプリの特徴
-1. **通常モードと復習モードの切り替え**: サイドバーからワンクリックで切り替え可能です。
-2. **自動リスト更新**: 間違えた問題は自動で「間違えた単語の一覧」にストックされ、復習モードで出題されます。見事正解すると自動的にそのリストから外れていくため、効率よく苦手を克服できます。
-3. **解答履歴の保持**: セッション中、解いた問題の履歴と正答率がリアルタイムでサイドバーに表示されます。
+with tab1:
+    st.subheader("これまでのすべての解答履歴")
+    if not st.session_state.history:
+        st.write("まだ解答履歴はありません。")
+    else:
+        for h in reversed(st.session_state.history):
+            status = "✅ 正解" if h["is_correct"] else "❌ 不正解"
+            st.write(f"- **{h['word']}** : あなたの回答 = {h['user_answer']} ({status})")
+
+with tab2:
+    st.subheader("現在復習が必要な単語")
+    if not st.session_state.wrong_words:
+        st.success("現在、間違えた単語はありません！")
+    else:
+        for w in st.session_state.wrong_words:
+            # 意味を引く
+            meaning = next((item["meaning"] for item in WORDS_DB if item["word"] == w), "")
+            st.write(f"- **{w}** (意味: {meaning})")
